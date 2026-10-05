@@ -2,7 +2,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-  /* Layout: one full-bleed stage; the greeting is made of particles, a thin mono HUD sits on top. Single dark look by choice. */
+  /* Layout: one full-bleed stage; the greeting and Pix the mascot are both made of particles, a thin mono HUD sits on top. Single dark look by choice. */
   :root {
     --bg: #07060b;
     --fg: #ece8f5;
@@ -37,27 +37,14 @@
   button:hover { border-color: var(--accent); color: var(--accent); }
   button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  .buddy {
-    position: fixed; right: max(20px, env(safe-area-inset-right, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    width: clamp(72px, 11vw, 112px); z-index: 2; cursor: pointer; border: 0; padding: 0; background: none; border-radius: 50%;
-  }
+  .buddy { position: fixed; z-index: 2; border: 0; padding: 0; border-radius: 50%; background: none; }
   .buddy:hover { border: 0; }
-  .buddy svg { width: 100%; height: auto; display: block; overflow: visible; animation: bob 2.6s ease-in-out infinite; }
-  .buddy.hop svg { animation: hop .6s cubic-bezier(.3,1.6,.5,1); }
-  .buddy .arm { transform-origin: 30px 78px; }
-  .buddy.hop .arm, .buddy:hover .arm { animation: wave .5s ease-in-out 2; }
-  .buddy .lid { transform-origin: center; transform-box: fill-box; transform: scaleY(0); animation: blink 4.2s infinite; }
   .bubble {
-    position: absolute; right: 70%; bottom: 92%; white-space: nowrap; pointer-events: none;
+    position: fixed; z-index: 2; white-space: nowrap; pointer-events: none; transform-origin: 100% 100%;
     font: 13px var(--display); color: var(--bg); background: var(--fg);
     padding: 6px 10px; border-radius: 12px 12px 2px 12px; transition: transform .25s, opacity .25s;
   }
   .bubble.out { transform: translateY(6px) scale(.8); opacity: 0; }
-  @keyframes bob { 50% { transform: translateY(-6px); } }
-  @keyframes hop { 40% { transform: translateY(-38px) rotate(-12deg); } 70% { transform: translateY(0) scaleY(.86); } }
-  @keyframes wave { 50% { transform: rotate(-40deg); } }
-  @keyframes blink { 0%, 94%, 100% { transform: scaleY(0); } 97% { transform: scaleY(1); } }
-  @media (prefers-reduced-motion: reduce) { .buddy svg, .buddy .arm, .buddy .lid { animation: none !important; } }
 </style>
 
 <div class="hud top">
@@ -65,28 +52,8 @@
   <span>move to disturb · tap to translate</span>
 </div>
 <canvas id="stage" aria-hidden="true"></canvas>
-<button class="buddy" id="buddy" type="button" aria-label="Pix the mascot. Next language">
-  <span class="bubble" id="bubble">Hello!</span>
-  <svg viewBox="0 0 120 130" aria-hidden="true">
-    <defs>
-      <radialGradient id="skin" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#ffd1ea"/><stop offset=".45" stop-color="#ff4fa3"/><stop offset="1" stop-color="#7a2bd6"/></radialGradient>
-      <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
-    </defs>
-    <line x1="60" y1="30" x2="66" y2="8" stroke="#ece8f5" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="67" cy="7" r="6" fill="#5ff5ff"><animate attributeName="r" values="5;7;5" dur="1.4s" repeatCount="indefinite"/></circle>
-    <circle cx="60" cy="74" r="46" fill="#ff4fa3" opacity=".45" filter="url(#glow)"/>
-    <g class="arm"><ellipse cx="22" cy="72" rx="9" ry="16" fill="#c13aa6" transform="rotate(25 22 72)"/></g>
-    <ellipse cx="98" cy="84" rx="8" ry="14" fill="#9a32c4" transform="rotate(-20 98 84)"/>
-    <circle cx="60" cy="74" r="42" fill="url(#skin)"/>
-    <g id="eyes">
-      <circle cx="45" cy="66" r="11" fill="#fff"/><circle cx="75" cy="66" r="11" fill="#fff"/>
-      <circle class="pupil" cx="45" cy="66" r="5.5" fill="#07060b"/><circle class="pupil" cx="75" cy="66" r="5.5" fill="#07060b"/>
-      <rect class="lid" x="33" y="54" width="54" height="24" fill="#ff6fb6"/>
-    </g>
-    <path d="M48 88 Q60 99 72 88" stroke="#07060b" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-    <circle cx="36" cy="84" r="5" fill="#ff9acb" opacity=".8"/><circle cx="84" cy="84" r="5" fill="#ff9acb" opacity=".8"/>
-  </svg>
-</button>
+<button class="buddy" id="buddy" type="button" aria-label="Pix the mascot. Next language"></button>
+<span class="bubble" id="bubble">Hello!</span>
 <h1 class="sr" id="said">Hello, World!</h1>
 <div class="hud bottom">
   <span class="lang" id="lang">English</span>
@@ -95,46 +62,40 @@
 
 <script>
 (() => {
+  // [greeting, language, what Pix says, costume note for screen readers]
   const GREETINGS = [
-    ["Hello, World!", "English"], ["¡Hola, Mundo!", "Español"], ["こんにちは世界", "日本語"],
-    ["Bonjour, le monde!", "Français"], ["안녕, 세상!", "한국어"], ["Hallo, Welt!", "Deutsch"],
-    ["Olá, Mundo!", "Português"], ["Привет, мир!", "Русский"], ["Ciao, mondo!", "Italiano"],
-    ["你好，世界", "中文"], ["Merhaba, Dünya!", "Türkçe"], ["01001000 01101001", "Binary"],
+    ["Hello, World!", "English", "Cheerio!", "a bowler hat and a cup of tea"],
+    ["¡Hola, Mundo!", "Español", "¡Olé!", "a flat Cordoba hat and a red carnation"],
+    ["こんにちは世界", "日本語", "こんにちは!", "a hachimaki headband and an onigiri"],
+    ["Bonjour, le monde!", "Français", "Ooh là là!", "a beret, a striped shirt and a baguette"],
+    ["안녕, 세상!", "한국어", "안녕!", "a traditional gat hat"],
+    ["Hallo, Welt!", "Deutsch", "Prost!", "a feathered Alpine hat and a pretzel"],
+    ["Olá, Mundo!", "Português", "Golo!", "a green and gold scarf and a football"],
+    ["Привет, мир!", "Русский", "Привет!", "a fur ushanka"],
+    ["Ciao, mondo!", "Italiano", "Mamma mia!", "a chef's hat and a moustache"],
+    ["你好，世界", "中文", "你好!", "a red paper lantern"],
+    ["Merhaba, Dünya!", "Türkçe", "Merhaba!", "a red fez with a tassel"],
+    ["01001000 01101001", "Binary", "beep boop", "a neon visor"],
   ];
   const cvs = document.getElementById("stage"), ctx = cvs.getContext("2d");
   const $ = id => document.getElementById(id);
-  const buddy = $("buddy"), bubble = $("bubble"), pupils = [...buddy.querySelectorAll(".pupil")];
-  let bubbleT;
-  function say(word) {
-    bubble.classList.add("out");
-    clearTimeout(bubbleT);
-    bubbleT = setTimeout(() => { bubble.textContent = word; bubble.classList.remove("out"); }, 180);
-    buddy.classList.remove("hop"); void buddy.offsetWidth; buddy.classList.add("hop");
-  }
-  function look() {
-    const r = buddy.getBoundingClientRect(), s = r.width / 120;
-    const tx = mouse.x < -1e3 ? r.left - 200 : mouse.x + cvs.getBoundingClientRect().left;
-    const ty = mouse.y < -1e3 ? r.top - 80 : mouse.y + cvs.getBoundingClientRect().top;
-    pupils.forEach((el, i) => {
-      const ex = r.left + (i ? 75 : 45) * s, ey = r.top + 66 * s;
-      const a = Math.atan2(ty - ey, tx - ex), d = Math.min(4.5, Math.hypot(tx - ex, ty - ey) / 40);
-      el.setAttribute("transform", `translate(${(Math.cos(a) * d).toFixed(2)} ${(Math.sin(a) * d).toFixed(2)})`);
-    });
-  }
+  const buddy = $("buddy"), bubble = $("bubble");
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let W = 0, H = 0, dpr = 1, idx = 0, spring = 0, frame = 0;
-  let P = [];
+  let W = 0, H = 0, dpr = 1, idx = 0, spring = 0, frame = 0, dot = 2;
+  let P = [], M = [];
+  const mouse = { x: -1e4, y: -1e4 };
   // Pre-built colour table: 72 hues x 4 brightness steps, so the hot loop never builds strings.
   const COL = Array.from({ length: 72 }, (_, h) => [0, 1, 2, 3].map(l => `hsl(${h * 5} 95% ${58 + l * 10}%)`));
-  const mouse = { x: -1e4, y: -1e4 };
 
+  /* ---------- the greeting ---------- */
   function sample(text) {
     const off = document.createElement("canvas");
     off.width = W; off.height = H;
     const o = off.getContext("2d");
+    const face = getComputedStyle(document.documentElement).getPropertyValue("--display");
     const fit = lines => {
-      let size = Math.min(H * 0.7 / lines.length / 1.15, 220);
-      o.font = `${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--display")}`;
+      let size = Math.min(H * 0.6 / lines.length / 1.15, 220);
+      o.font = `${size}px ${face}`;
       const w = Math.max(...lines.map(l => o.measureText(l).width));
       if (w > W * 0.9) size *= W * 0.9 / w;
       return size;
@@ -146,22 +107,196 @@
       lines = [text.slice(0, cut), text.slice(cut + 1)];
       size = fit(lines);
     }
-    o.font = o.font.replace(/^[\d.]+px/, size + "px");
+    o.font = `${size}px ${face}`;
     o.textAlign = "center"; o.textBaseline = "middle"; o.fillStyle = "#fff";
-    const lh = size * 1.15, y0 = H / 2 - (lines.length - 1) * lh / 2;
+    const lh = size * 1.15, y0 = H * 0.44 - (lines.length - 1) * lh / 2;
     lines.forEach((l, i) => o.fillText(l, W / 2, y0 + i * lh));
     const step = Math.max(2, Math.round(size / 73));
     const data = o.getImageData(0, 0, W, H).data, pts = [];
     for (let y = 0; y < H; y += step)
       for (let x = 0; x < W; x += step)
         if (data[(y * W + x) * 4 + 3] > 140) pts.push([x, y]);
-    for (let i = pts.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [pts[i], pts[j]] = [pts[j], pts[i]]; }
+    shuffle(pts);
     return { pts, dot: Math.max(1.2, step * 0.7) };
   }
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
-  let dot = 2;
+  /* ---------- Pix: costumes drawn with canvas shapes, then sampled into coloured particles ---------- */
+  const fill = (o, c) => { o.fillStyle = c; o.fill(); };
+  const ell = (o, x, y, rx, ry, rot = 0) => { o.beginPath(); o.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); };
+  const box = (o, x, y, w, h) => { o.beginPath(); o.rect(x, y, w, h); };
+  const COSTUMES = [
+    (o, x, y, r) => { // English: bowler hat + teacup
+      ell(o, x, y - r * .82, r * .78, r * .13); fill(o, "#6a6584");
+      o.beginPath(); o.arc(x, y - r * .86, r * .5, Math.PI, 0); fill(o, "#6a6584");
+      box(o, x - r * .5, y - r * .98, r, r * .12); fill(o, "#d3263f");
+      box(o, x + r * .82, y + r * .15, r * .42, r * .36); fill(o, "#f4f1ff");
+      o.lineWidth = r * .08; o.strokeStyle = "#f4f1ff"; o.beginPath(); o.arc(x + r * 1.26, y + r * .32, r * .12, -1.4, 1.4); o.stroke();
+      o.strokeStyle = "#b9b4cc"; o.lineWidth = r * .04;
+      for (const dx of [.95, 1.1]) { o.beginPath(); o.moveTo(x + r * dx, y + r * .05); o.quadraticCurveTo(x + r * (dx + .08), y - r * .1, x + r * dx, y - r * .25); o.stroke(); }
+    },
+    (o, x, y, r) => { // Español: flat Cordoba hat + red carnation
+      ell(o, x, y - r * .8, r * 1.05, r * .14); fill(o, "#5d5670");
+      box(o, x - r * .45, y - r * 1.18, r * .9, r * .38); fill(o, "#5d5670");
+      box(o, x - r * .45, y - r * .9, r * .9, r * .08); fill(o, "#d3263f");
+      ell(o, x - r * .72, y + r * .35, r * .1, r * .3, .5); fill(o, "#3c9a4a");
+      for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; ell(o, x - r * .82 + Math.cos(a) * r * .14, y + r * .08 + Math.sin(a) * r * .14, r * .13, r * .13); fill(o, i % 2 ? "#ff3355" : "#e0102f"); }
+    },
+    (o, x, y, r) => { // 日本語: hachimaki + onigiri
+      o.save(); ell(o, x, y, r, r); o.clip();
+      box(o, x - r, y - r * .62, r * 2, r * .24); fill(o, "#f6f3ff"); o.restore();
+      ell(o, x, y - r * .5, r * .1, r * .1); fill(o, "#e0102f");
+      ell(o, x + r * .96, y - r * .62, r * .18, r * .07, -.5); fill(o, "#f6f3ff");
+      o.beginPath(); o.moveTo(x + r * 1.05, y - r * .05); o.lineTo(x + r * 1.42, y + r * .55); o.lineTo(x + r * .68, y + r * .55); o.closePath(); fill(o, "#f6f3ff");
+      box(o, x + r * .86, y + r * .3, r * .38, r * .25); fill(o, "#2d6b45");
+    },
+    (o, x, y, r) => { // Français: stripes + beret + baguette
+      o.save(); ell(o, x, y, r, r); o.clip();
+      for (let i = 0; i < 4; i++) { box(o, x - r, y + r * (.42 + i * .16), r * 2, r * .08); fill(o, "#2c3f9e"); }
+      o.restore();
+      ell(o, x - r * .1, y - r * .86, r * .72, r * .26, -.15); fill(o, "#2b2f6e");
+      ell(o, x - r * .08, y - r * 1.14, r * .06, r * .1); fill(o, "#2b2f6e");
+      o.save(); o.translate(x + r * 1.05, y + r * .2); o.rotate(-.9);
+      ell(o, 0, 0, r * .62, r * .12); fill(o, "#d99a4e");
+      o.strokeStyle = "#f1c48a"; o.lineWidth = r * .03;
+      for (let i = -2; i <= 2; i++) { o.beginPath(); o.moveTo(i * r * .2 - r * .05, -r * .06); o.lineTo(i * r * .2 + r * .05, r * .06); o.stroke(); }
+      o.restore();
+    },
+    (o, x, y, r) => { // 한국어: gat
+      ell(o, x, y - r * .78, r * 1.15, r * .14); fill(o, "#4a4560");
+      box(o, x - r * .3, y - r * 1.32, r * .6, r * .54); fill(o, "#4a4560");
+      ell(o, x, y - r * 1.32, r * .3, r * .07); fill(o, "#5d5878");
+      o.fillStyle = "#e9c46a";
+      for (let i = 0; i < 6; i++) { ell(o, x + r * .82 - i * r * .02, y - r * .55 + i * r * .2, r * .05, r * .05); o.fill(); }
+    },
+    (o, x, y, r) => { // Deutsch: Alpine hat with feather + pretzel
+      o.beginPath(); o.moveTo(x - r * .5, y - r * .82); o.lineTo(x - r * .34, y - r * 1.3); o.lineTo(x + r * .34, y - r * 1.3); o.lineTo(x + r * .5, y - r * .82); o.closePath(); fill(o, "#3f7d3a");
+      ell(o, x, y - r * .8, r * .8, r * .12); fill(o, "#3f7d3a");
+      box(o, x - r * .45, y - r * .98, r * .9, r * .1); fill(o, "#8a3b2a");
+      ell(o, x + r * .55, y - r * 1.25, r * .1, r * .42, .6); fill(o, "#e0402f");
+      o.strokeStyle = "#b8743a"; o.lineWidth = r * .1;
+      o.beginPath(); o.arc(x + r * .98, y + r * .3, r * .16, 0, Math.PI * 2); o.stroke();
+      o.beginPath(); o.arc(x + r * 1.28, y + r * .3, r * .16, 0, Math.PI * 2); o.stroke();
+      o.beginPath(); o.arc(x + r * 1.13, y + r * .26, r * .34, Math.PI * 1.05, Math.PI * 1.95); o.stroke();
+    },
+    (o, x, y, r) => { // Português: scarf + football
+      o.save(); ell(o, x, y, r, r); o.clip();
+      for (let i = 0; i < 6; i++) { box(o, x - r + i * r * .34, y + r * .5, r * .34, r * .24); fill(o, i % 2 ? "#f2c500" : "#169a4a"); }
+      o.restore();
+      ell(o, x + r * 1.12, y + r * .45, r * .32, r * .32); fill(o, "#f4f1ff");
+      o.beginPath();
+      for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * Math.PI * 2 / 5; o.lineTo(x + r * 1.12 + Math.cos(a) * r * .13, y + r * .45 + Math.sin(a) * r * .13); }
+      o.closePath(); fill(o, "#3a3550");
+    },
+    (o, x, y, r) => { // Русский: ushanka
+      o.beginPath(); o.arc(x, y - r * .62, r * .82, Math.PI, 0); fill(o, "#8a6448");
+      box(o, x - r * .92, y - r * .7, r * .3, r * .78); fill(o, "#a37a58");
+      box(o, x + r * .62, y - r * .7, r * .3, r * .78); fill(o, "#a37a58");
+      box(o, x - r * .82, y - r * .82, r * 1.64, r * .2); fill(o, "#a37a58");
+      o.beginPath();
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .06 : r * .14; o.lineTo(x + Math.cos(a) * rr, y - r * 1.1 + Math.sin(a) * rr); }
+      o.closePath(); fill(o, "#e0102f");
+    },
+    (o, x, y, r) => { // Italiano: toque + moustache
+      box(o, x - r * .45, y - r * 1.05, r * .9, r * .3); fill(o, "#f6f3ff");
+      for (const [dx, dy, s] of [[-.32, -1.22, .3], [0, -1.35, .36], [.32, -1.22, .3]]) { ell(o, x + r * dx, y + r * dy, r * s, r * s); fill(o, "#f6f3ff"); }
+      ell(o, x - r * .18, y + r * .3, r * .2, r * .08, .25); fill(o, "#4a2a1c");
+      ell(o, x + r * .18, y + r * .3, r * .2, r * .08, -.25); fill(o, "#4a2a1c");
+      box(o, x - r * .9, y + r * .55, r * 1.8, r * .5); o.save(); ell(o, x, y, r, r); o.clip(); box(o, x - r, y + r * .58, r * 2, r * .1); fill(o, "#d3263f"); o.restore();
+    },
+    (o, x, y, r) => { // 中文: red lantern
+      o.strokeStyle = "#e9c46a"; o.lineWidth = r * .05;
+      o.beginPath(); o.moveTo(x + r * .75, y - r * .3); o.quadraticCurveTo(x + r * 1.1, y - r * .6, x + r * 1.18, y - r * .22); o.stroke();
+      ell(o, x + r * 1.18, y + r * .18, r * .36, r * .3); fill(o, "#e0102f");
+      box(o, x + r * 1.02, y - r * .18, r * .32, r * .07); fill(o, "#e9c46a");
+      box(o, x + r * 1.02, y + r * .44, r * .32, r * .07); fill(o, "#e9c46a");
+      o.strokeStyle = "#ff7a5c"; o.lineWidth = r * .03;
+      for (const dx of [-.16, 0, .16]) { o.beginPath(); o.ellipse(x + r * (1.18 + dx * .2), y + r * .18, r * Math.abs(dx) * 1.6 + 1, r * .28, 0, 0, Math.PI * 2); o.stroke(); }
+      box(o, x + r * 1.16, y + r * .5, r * .04, r * .28); fill(o, "#e9c46a");
+    },
+    (o, x, y, r) => { // Türkçe: fez
+      o.beginPath(); o.moveTo(x - r * .42, y - r * .78); o.lineTo(x - r * .3, y - r * 1.3); o.lineTo(x + r * .3, y - r * 1.3); o.lineTo(x + r * .42, y - r * .78); o.closePath(); fill(o, "#c8102e");
+      ell(o, x, y - r * 1.3, r * .3, r * .06); fill(o, "#e0303f");
+      o.strokeStyle = "#e9c46a"; o.lineWidth = r * .05;
+      o.beginPath(); o.moveTo(x, y - r * 1.3); o.quadraticCurveTo(x + r * .4, y - r * 1.35, x + r * .5, y - r * .95); o.stroke();
+      ell(o, x + r * .5, y - r * .88, r * .07, r * .12); fill(o, "#e9c46a");
+    },
+    (o, x, y, r) => { // Binary: neon visor
+      o.save(); ell(o, x, y, r, r); o.clip();
+      box(o, x - r, y - r * .5, r * 2, r * .08); fill(o, "#39ff9a");
+      o.restore();
+      o.font = `${r * .32}px monospace`; o.textAlign = "center"; o.fillStyle = "#39ff9a";
+      o.fillText("01", x, y + r * .72);
+      o.strokeStyle = "#39ff9a"; o.lineWidth = r * .05;
+      o.beginPath(); o.arc(x, y - r * .1, r * 1.08, Math.PI * 1.08, Math.PI * 1.92); o.stroke();
+    },
+  ];
+
+  let pix = { x: 0, y: 0, r: 40, eyes: [] }, hop = 0, blink = 0, nextBlink = 120, spin = 0;
+  function layout() {
+    const r = Math.max(30, Math.min(70, Math.min(W, H) * 0.1));
+    pix = { r, x: W - r * 1.9 - 8, y: H - r * 1.2 - 70 };
+    pix.eyes = [[pix.x - r * .36, pix.y - r * .1], [pix.x + r * .36, pix.y - r * .1]];
+    Object.assign(buddy.style, { left: pix.x - r + "px", top: pix.y - r + "px", width: r * 2 + "px", height: r * 2 + "px" });
+  }
+  // Draws one layer of Pix at the origin, then returns its opaque pixels as [x, y, colour, part].
+  function sampleLayer(draw, part, step) {
+    const r = pix.r, S = Math.ceil(r * 3.4), off = document.createElement("canvas");
+    off.width = off.height = S;
+    const o = off.getContext("2d");
+    o.translate(S / 2, S / 2);
+    draw(o, 0, 0, r);
+    const d = o.getImageData(0, 0, S, S).data, out = [];
+    for (let y = 0; y < S; y += step)
+      for (let x = 0; x < S; x += step) {
+        const i = (y * S + x) * 4;
+        if (d[i + 3] > 160) out.push([x - S / 2, y - S / 2, `rgb(${d[i]},${d[i + 1]},${d[i + 2]})`, part]);
+      }
+    return out;
+  }
+  function samplePix() {
+    const r = pix.r, step = Math.max(2, Math.round(r / 22));
+    const body = (o, x, y) => {
+      o.strokeStyle = "#ece8f5"; o.lineWidth = r * .07;
+      o.beginPath(); o.moveTo(x, y - r * .9); o.lineTo(x + r * .14, y - r * 1.4); o.stroke();
+      ell(o, x + r * .16, y - r * 1.45, r * .12, r * .12); fill(o, "#5ff5ff");
+      ell(o, x - r * 1.0, y + r * .2, r * .2, r * .34, .4); fill(o, "#c13aa6");
+      ell(o, x + r * 1.0, y + r * .2, r * .2, r * .34, -.4); fill(o, "#9a32c4");
+      const g = o.createRadialGradient(x - r * .3, y - r * .35, r * .1, x, y, r);
+      g.addColorStop(0, "#ffd1ea"); g.addColorStop(.45, "#ff4fa3"); g.addColorStop(1, "#7a2bd6");
+      ell(o, x, y, r, r); fill(o, g);
+      ell(o, x - r * .58, y + r * .2, r * .12, r * .1); fill(o, "#ffa0d0");
+      ell(o, x + r * .58, y + r * .2, r * .12, r * .1); fill(o, "#ffa0d0");
+      o.strokeStyle = "#1a0b24"; o.lineWidth = r * .08; o.lineCap = "round";
+      o.beginPath(); o.arc(x, y + r * .12, r * .26, .3, Math.PI - .3); o.stroke();
+    };
+    const pts = [
+      ...sampleLayer(body, 0, step),
+      ...sampleLayer((o, x, y) => COSTUMES[idx](o, x, y, r), 0, step),
+      ...sampleLayer((o, x, y) => { for (const s of [-1, 1]) { ell(o, x + s * r * .36, y - r * .1, r * .24, r * .26); fill(o, "#ffffff"); } }, 1, step),
+      ...sampleLayer((o, x, y) => { for (const s of [-1, 1]) { ell(o, x + s * r * .36, y - r * .1, r * .11, r * .11); fill(o, "#120a1e"); } }, 2, step),
+    ];
+    return { pts, dot: step * 1.05 };
+  }
+  let mdot = 2;
+  function retargetPix(first) {
+    const { pts, dot: d } = samplePix();
+    mdot = d;
+    const old = M;
+    // Painter's order matters (body, costume, eyes, pupils), so particles are rebuilt in that order
+    // and each one inherits the position of a random old particle so the costume change swirls.
+    M = pts.map(([dx, dy, c, part]) => {
+      const src = old.length && !first ? old[Math.random() * old.length | 0] : null;
+      return {
+        x: src ? src.x : pix.x + (Math.random() - .5) * W * .6, y: src ? src.y : H + Math.random() * H * .5,
+        vx: src ? src.vx : 0, vy: src ? src.vy : 0, dx, dy, c, part, k: .7 + Math.random() * .6,
+      };
+    });
+  }
+
+  /* ---------- switching languages ---------- */
   function retarget(first) {
-    const [text, lang] = GREETINGS[idx];
+    const [text, lang, word, costume] = GREETINGS[idx];
     const s = sample(text);
     dot = s.dot;
     s.pts.forEach(([x, y], i) => {
@@ -175,21 +310,30 @@
       p.tx = x; p.ty = y; p.k = 0.6 + Math.random() * 0.8;
     });
     P.length = s.pts.length;
+    retargetPix(first);
     spring = calm ? 1 : 0;
     if (calm) P.forEach(p => { p.x = p.tx; p.y = p.ty; });
-    $("count").textContent = P.length.toLocaleString();
+    hop = first ? 0 : 1; spin = first ? 0 : 1;
+    $("count").textContent = (P.length + M.length).toLocaleString();
     $("lang").textContent = lang;
-    $("said").textContent = text;
-    say(text.split(/[,，、\s]/)[0].replace(/[!¡]/g, "") + "!");
+    $("said").textContent = `${text} Pix is wearing ${costume}.`;
+    buddy.setAttribute("aria-label", `Pix the mascot, wearing ${costume}. Next language`);
     document.title = text;
+    say(word);
+  }
+  let bubbleT;
+  function say(word) {
+    bubble.classList.add("out");
+    clearTimeout(bubbleT);
+    bubbleT = setTimeout(() => { bubble.textContent = word; bubble.classList.remove("out"); }, 350);
   }
 
   function burst(cx, cy) {
-    if (!calm) P.forEach(p => {
+    if (!calm) for (const p of [...P, ...M]) {
       const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) || 1;
       const f = 14 + Math.random() * 18;
       p.vx += dx / d * f; p.vy += dy / d * f;
-    });
+    }
     idx = (idx + 1) % GREETINGS.length;
     retarget(false);
   }
@@ -200,38 +344,74 @@
     cvs.width = W * dpr; cvs.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = "#07060b"; ctx.fillRect(0, 0, W, H);
+    layout();
+  }
+
+  function physics(p, tx, ty, k, R, R2) {
+    p.vx = p.vx * 0.86 + (tx - p.x) * k;
+    p.vy = p.vy * 0.86 + (ty - p.y) * k + (spring < 1 ? 0.15 * (1 - spring) : 0);
+    const dx = p.x - mouse.x, dy = p.y - mouse.y, d2 = dx * dx + dy * dy;
+    if (d2 < R2 && !calm) { const d = Math.sqrt(d2) || 1, f = (1 - d / R) * 4.5; p.vx += dx / d * f; p.vy += dy / d * f; }
+    p.x += p.vx; p.y += p.vy;
   }
 
   let last = performance.now(), fps = 60;
   function tick(now) {
     fps += (1000 / Math.max(1, now - last) - fps) * 0.05; last = now;
     if (++frame % 15 === 0) $("fps").textContent = Math.round(fps);
-    look();
     spring = Math.min(1, spring + 0.012);
     const t = now / 1000, R = Math.min(W, H) * 0.14, R2 = R * R;
     ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = calm ? "#07060b" : "rgba(7,6,11,0.28)";
     ctx.fillRect(0, 0, W, H);
+
+    // Greeting: additive rainbow glow.
     ctx.globalCompositeOperation = "lighter";
     for (const p of P) {
-      const k = 0.045 * spring * spring * p.k;
-      p.vx = p.vx * 0.86 + (p.tx - p.x) * k;
-      p.vy = p.vy * 0.86 + (p.ty - p.y) * k + (spring < 1 ? 0.15 * (1 - spring) : 0);
-      const dx = p.x - mouse.x, dy = p.y - mouse.y, d2 = dx * dx + dy * dy;
-      if (d2 < R2 && !calm) { const d = Math.sqrt(d2) || 1, f = (1 - d / R) * 4.5; p.vx += dx / d * f; p.vy += dy / d * f; }
-      p.x += p.vx; p.y += p.vy;
+      physics(p, p.tx, p.ty, 0.045 * spring * spring * p.k, R, R2);
       const sp = Math.min(1, Math.hypot(p.vx, p.vy) / 12);
       ctx.fillStyle = COL[((p.tx / W * 300 + t * 60) % 360) / 5 | 0][sp * 3.99 | 0];
       ctx.fillRect(p.x - dot / 2, p.y - dot / 2, dot, dot);
     }
+
+    // Pix: idle bob, a hop and half-spin on each new language, blinking, eyes that follow the pointer,
+    // and a startled squash when the pointer comes close.
+    hop = Math.max(0, hop - 0.025); spin = Math.max(0, spin - 0.02);
+    if (--nextBlink <= 0) { blink = 1; nextBlink = 140 + Math.random() * 200; }
+    blink = Math.max(0, blink - 0.12);
+    const near = Math.hypot(mouse.x - pix.x, mouse.y - pix.y) < pix.r * 2.4;
+    const cx = pix.x, cy = pix.y - Math.sin(hop * Math.PI) * pix.r * 1.1 + (calm ? 0 : Math.sin(t * 2.4) * pix.r * .06);
+    const squash = near ? 1.08 : 1, tilt = Math.sin(spin * Math.PI * 2) * .35;
+    const cosT = Math.cos(tilt), sinT = Math.sin(tilt);
+    const lx = mouse.x < -1e3 ? -1 : mouse.x - cx, ly = mouse.y < -1e3 ? -.4 : mouse.y - cy;
+    const ll = Math.hypot(lx, ly) || 1, look = Math.min(pix.r * .11, ll / 12);
+    const lid = near ? 1 : 1 - Math.sin(blink * Math.PI);
+    ctx.globalCompositeOperation = "source-over";
+    const k = 0.09 * spring;
+    for (const p of M) {
+      let dx = p.dx, dy = p.dy;
+      if (p.part) {
+        const ey = -pix.r * .1;
+        dy = ey + (dy - ey) * (p.part === 2 && near ? 1.25 : lid);
+        if (p.part === 2) { dx += lx / ll * look; dy += ly / ll * look * lid; }
+      }
+      dx *= 1 / squash; dy *= squash;
+      physics(p, cx + dx * cosT - dy * sinT, cy + dx * sinT + dy * cosT, k * p.k, R * .6, R2 * .36);
+      ctx.fillStyle = p.c;
+      ctx.fillRect(p.x - mdot / 2, p.y - mdot / 2, mdot, mdot);
+    }
+    const bw = bubble.offsetWidth;
+    bubble.style.left = Math.max(8, cx - pix.r * .4 - bw) + "px";
+    bubble.style.top = cy - pix.r * 1.75 - bubble.offsetHeight + "px";
     requestAnimationFrame(tick);
   }
 
   const point = e => { const r = cvs.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; };
   cvs.addEventListener("pointermove", point);
+  buddy.addEventListener("pointermove", point);
   cvs.addEventListener("pointerdown", e => { point(e); burst(mouse.x, mouse.y); });
   cvs.addEventListener("pointerleave", () => { mouse.x = mouse.y = -1e4; });
-  buddy.addEventListener("click", () => burst(W / 2, H / 2));
+  buddy.addEventListener("click", () => burst(pix.x, pix.y));
   $("next").addEventListener("click", () => burst(W / 2, H / 2));
   addEventListener("keydown", e => { if (e.key === " " && e.target === document.body) { e.preventDefault(); burst(W / 2, H / 2); } });
   let rt;
