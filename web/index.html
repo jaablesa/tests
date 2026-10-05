@@ -1,0 +1,178 @@
+<title>Hello, World!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: one full-bleed stage; the greeting is made of particles, a thin mono HUD sits on top. Single dark look by choice. */
+  :root {
+    --bg: #07060b;
+    --fg: #ece8f5;
+    --dim: #8a8499;
+    --line: #2a2634;
+    --accent: #ff4fa3;
+    --display: "Bungee", "Arial Black", Impact, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--mono);
+    overflow: hidden; display: grid; grid-template-rows: auto 1fr auto;
+  }
+  canvas { grid-row: 1 / -1; grid-column: 1; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+  .hud {
+    grid-column: 1; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px 24px;
+    justify-content: space-between; align-items: center;
+    padding: 14px max(16px, env(safe-area-inset-left, 0px));
+    font-size: 12px; letter-spacing: .06em; color: var(--dim); pointer-events: none;
+  }
+  .hud.top { grid-row: 1; }
+  .hud.bottom { grid-row: 3; }
+  .hud b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .lang { font-family: var(--display); font-size: 15px; color: var(--fg); letter-spacing: .04em; }
+  button {
+    pointer-events: auto; font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase;
+    color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 14px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+
+<div class="hud top">
+  <span><b id="count">0</b> particles · <b id="fps">60</b> fps</span>
+  <span>move to disturb · tap to translate</span>
+</div>
+<canvas id="stage" aria-hidden="true"></canvas>
+<h1 class="sr" id="said">Hello, World!</h1>
+<div class="hud bottom">
+  <span class="lang" id="lang">English</span>
+  <button id="next" type="button">Next language →</button>
+</div>
+
+<script>
+(() => {
+  const GREETINGS = [
+    ["Hello, World!", "English"], ["¡Hola, Mundo!", "Español"], ["こんにちは世界", "日本語"],
+    ["Bonjour, le monde!", "Français"], ["안녕, 세상!", "한국어"], ["Hallo, Welt!", "Deutsch"],
+    ["Olá, Mundo!", "Português"], ["Привет, мир!", "Русский"], ["Ciao, mondo!", "Italiano"],
+    ["你好，世界", "中文"], ["Merhaba, Dünya!", "Türkçe"], ["01001000 01101001", "Binary"],
+  ];
+  const cvs = document.getElementById("stage"), ctx = cvs.getContext("2d");
+  const $ = id => document.getElementById(id);
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W = 0, H = 0, dpr = 1, idx = 0, spring = 0, frame = 0;
+  let P = [];
+  const mouse = { x: -1e4, y: -1e4 };
+
+  function sample(text) {
+    const off = document.createElement("canvas");
+    off.width = W; off.height = H;
+    const o = off.getContext("2d");
+    const fit = lines => {
+      let size = Math.min(H * 0.7 / lines.length / 1.15, 220);
+      o.font = `${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--display")}`;
+      const w = Math.max(...lines.map(l => o.measureText(l).width));
+      if (w > W * 0.9) size *= W * 0.9 / w;
+      return size;
+    };
+    let lines = [text], size = fit(lines);
+    if (size < H * 0.13 && text.includes(" ")) {
+      const mid = text.length / 2, spaces = [...text].map((c, i) => c === " " ? i : -1).filter(i => i >= 0);
+      const cut = spaces.reduce((a, b) => Math.abs(b - mid) < Math.abs(a - mid) ? b : a);
+      lines = [text.slice(0, cut), text.slice(cut + 1)];
+      size = fit(lines);
+    }
+    o.font = o.font.replace(/^[\d.]+px/, size + "px");
+    o.textAlign = "center"; o.textBaseline = "middle"; o.fillStyle = "#fff";
+    const lh = size * 1.15, y0 = H / 2 - (lines.length - 1) * lh / 2;
+    lines.forEach((l, i) => o.fillText(l, W / 2, y0 + i * lh));
+    const step = Math.max(3, Math.round(size / 42));
+    const data = o.getImageData(0, 0, W, H).data, pts = [];
+    for (let y = 0; y < H; y += step)
+      for (let x = 0; x < W; x += step)
+        if (data[(y * W + x) * 4 + 3] > 140) pts.push([x, y]);
+    for (let i = pts.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [pts[i], pts[j]] = [pts[j], pts[i]]; }
+    return { pts, dot: Math.max(1.5, step * 0.62) };
+  }
+
+  let dot = 2;
+  function retarget(first) {
+    const [text, lang] = GREETINGS[idx];
+    const s = sample(text);
+    dot = s.dot;
+    s.pts.forEach(([x, y], i) => {
+      let p = P[i];
+      if (!p) {
+        const src = P.length ? P[Math.random() * P.length | 0] : null;
+        p = P[i] = first || !src
+          ? { x: Math.random() * W, y: -Math.random() * H * 1.2, vx: 0, vy: 0 }
+          : { x: src.x, y: src.y, vx: src.vx, vy: src.vy };
+      }
+      p.tx = x; p.ty = y; p.k = 0.6 + Math.random() * 0.8;
+    });
+    P.length = s.pts.length;
+    spring = calm ? 1 : 0;
+    if (calm) P.forEach(p => { p.x = p.tx; p.y = p.ty; });
+    $("count").textContent = P.length.toLocaleString();
+    $("lang").textContent = lang;
+    $("said").textContent = text;
+    document.title = text;
+  }
+
+  function burst(cx, cy) {
+    if (!calm) P.forEach(p => {
+      const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) || 1;
+      const f = 14 + Math.random() * 18;
+      p.vx += dx / d * f; p.vy += dy / d * f;
+    });
+    idx = (idx + 1) % GREETINGS.length;
+    retarget(false);
+  }
+
+  function resize() {
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    W = cvs.clientWidth; H = cvs.clientHeight;
+    cvs.width = W * dpr; cvs.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = "#07060b"; ctx.fillRect(0, 0, W, H);
+  }
+
+  let last = performance.now(), fps = 60;
+  function tick(now) {
+    fps += (1000 / Math.max(1, now - last) - fps) * 0.05; last = now;
+    if (++frame % 15 === 0) $("fps").textContent = Math.round(fps);
+    spring = Math.min(1, spring + 0.012);
+    const t = now / 1000, R = Math.min(W, H) * 0.14, R2 = R * R;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = calm ? "#07060b" : "rgba(7,6,11,0.28)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter";
+    for (const p of P) {
+      const k = 0.045 * spring * spring * p.k;
+      p.vx = p.vx * 0.86 + (p.tx - p.x) * k;
+      p.vy = p.vy * 0.86 + (p.ty - p.y) * k + (spring < 1 ? 0.15 * (1 - spring) : 0);
+      const dx = p.x - mouse.x, dy = p.y - mouse.y, d2 = dx * dx + dy * dy;
+      if (d2 < R2 && !calm) { const d = Math.sqrt(d2) || 1, f = (1 - d / R) * 4.5; p.vx += dx / d * f; p.vy += dy / d * f; }
+      p.x += p.vx; p.y += p.vy;
+      const sp = Math.min(1, Math.hypot(p.vx, p.vy) / 12);
+      const hue = (p.tx / W * 300 + t * 60) % 360;
+      ctx.fillStyle = `hsl(${hue} 95% ${58 + sp * 30}%)`;
+      ctx.fillRect(p.x - dot / 2, p.y - dot / 2, dot, dot);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  const point = e => { const r = cvs.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; };
+  cvs.addEventListener("pointermove", point);
+  cvs.addEventListener("pointerdown", e => { point(e); burst(mouse.x, mouse.y); });
+  cvs.addEventListener("pointerleave", () => { mouse.x = mouse.y = -1e4; });
+  $("next").addEventListener("click", () => burst(W / 2, H / 2));
+  addEventListener("keydown", e => { if (e.key === " " && e.target === document.body) { e.preventDefault(); burst(W / 2, H / 2); } });
+  let rt;
+  addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { resize(); retarget(false); }, 150); });
+
+  const fontReady = document.fonts ? Promise.race([document.fonts.load("100px Bungee"), new Promise(r => setTimeout(r, 1500))]) : Promise.resolve();
+  fontReady.finally(() => { resize(); retarget(true); requestAnimationFrame(tick); });
+})();
+</script>
