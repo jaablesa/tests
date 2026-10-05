@@ -37,6 +37,27 @@
   button:hover { border-color: var(--accent); color: var(--accent); }
   button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .buddy {
+    position: fixed; right: max(20px, env(safe-area-inset-right, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    width: clamp(72px, 11vw, 112px); z-index: 2; cursor: pointer; border: 0; padding: 0; background: none; border-radius: 50%;
+  }
+  .buddy:hover { border: 0; }
+  .buddy svg { width: 100%; height: auto; display: block; overflow: visible; animation: bob 2.6s ease-in-out infinite; }
+  .buddy.hop svg { animation: hop .6s cubic-bezier(.3,1.6,.5,1); }
+  .buddy .arm { transform-origin: 30px 78px; }
+  .buddy.hop .arm, .buddy:hover .arm { animation: wave .5s ease-in-out 2; }
+  .buddy .lid { transform-origin: center; transform-box: fill-box; transform: scaleY(0); animation: blink 4.2s infinite; }
+  .bubble {
+    position: absolute; right: 70%; bottom: 92%; white-space: nowrap; pointer-events: none;
+    font: 13px var(--display); color: var(--bg); background: var(--fg);
+    padding: 6px 10px; border-radius: 12px 12px 2px 12px; transition: transform .25s, opacity .25s;
+  }
+  .bubble.out { transform: translateY(6px) scale(.8); opacity: 0; }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+  @keyframes hop { 40% { transform: translateY(-38px) rotate(-12deg); } 70% { transform: translateY(0) scaleY(.86); } }
+  @keyframes wave { 50% { transform: rotate(-40deg); } }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(0); } 97% { transform: scaleY(1); } }
+  @media (prefers-reduced-motion: reduce) { .buddy svg, .buddy .arm, .buddy .lid { animation: none !important; } }
 </style>
 
 <div class="hud top">
@@ -44,6 +65,28 @@
   <span>move to disturb · tap to translate</span>
 </div>
 <canvas id="stage" aria-hidden="true"></canvas>
+<button class="buddy" id="buddy" type="button" aria-label="Pix the mascot. Next language">
+  <span class="bubble" id="bubble">Hello!</span>
+  <svg viewBox="0 0 120 130" aria-hidden="true">
+    <defs>
+      <radialGradient id="skin" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#ffd1ea"/><stop offset=".45" stop-color="#ff4fa3"/><stop offset="1" stop-color="#7a2bd6"/></radialGradient>
+      <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
+    </defs>
+    <line x1="60" y1="30" x2="66" y2="8" stroke="#ece8f5" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="67" cy="7" r="6" fill="#5ff5ff"><animate attributeName="r" values="5;7;5" dur="1.4s" repeatCount="indefinite"/></circle>
+    <circle cx="60" cy="74" r="46" fill="#ff4fa3" opacity=".45" filter="url(#glow)"/>
+    <g class="arm"><ellipse cx="22" cy="72" rx="9" ry="16" fill="#c13aa6" transform="rotate(25 22 72)"/></g>
+    <ellipse cx="98" cy="84" rx="8" ry="14" fill="#9a32c4" transform="rotate(-20 98 84)"/>
+    <circle cx="60" cy="74" r="42" fill="url(#skin)"/>
+    <g id="eyes">
+      <circle cx="45" cy="66" r="11" fill="#fff"/><circle cx="75" cy="66" r="11" fill="#fff"/>
+      <circle class="pupil" cx="45" cy="66" r="5.5" fill="#07060b"/><circle class="pupil" cx="75" cy="66" r="5.5" fill="#07060b"/>
+      <rect class="lid" x="33" y="54" width="54" height="24" fill="#ff6fb6"/>
+    </g>
+    <path d="M48 88 Q60 99 72 88" stroke="#07060b" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <circle cx="36" cy="84" r="5" fill="#ff9acb" opacity=".8"/><circle cx="84" cy="84" r="5" fill="#ff9acb" opacity=".8"/>
+  </svg>
+</button>
 <h1 class="sr" id="said">Hello, World!</h1>
 <div class="hud bottom">
   <span class="lang" id="lang">English</span>
@@ -60,9 +103,29 @@
   ];
   const cvs = document.getElementById("stage"), ctx = cvs.getContext("2d");
   const $ = id => document.getElementById(id);
+  const buddy = $("buddy"), bubble = $("bubble"), pupils = [...buddy.querySelectorAll(".pupil")];
+  let bubbleT;
+  function say(word) {
+    bubble.classList.add("out");
+    clearTimeout(bubbleT);
+    bubbleT = setTimeout(() => { bubble.textContent = word; bubble.classList.remove("out"); }, 180);
+    buddy.classList.remove("hop"); void buddy.offsetWidth; buddy.classList.add("hop");
+  }
+  function look() {
+    const r = buddy.getBoundingClientRect(), s = r.width / 120;
+    const tx = mouse.x < -1e3 ? r.left - 200 : mouse.x + cvs.getBoundingClientRect().left;
+    const ty = mouse.y < -1e3 ? r.top - 80 : mouse.y + cvs.getBoundingClientRect().top;
+    pupils.forEach((el, i) => {
+      const ex = r.left + (i ? 75 : 45) * s, ey = r.top + 66 * s;
+      const a = Math.atan2(ty - ey, tx - ex), d = Math.min(4.5, Math.hypot(tx - ex, ty - ey) / 40);
+      el.setAttribute("transform", `translate(${(Math.cos(a) * d).toFixed(2)} ${(Math.sin(a) * d).toFixed(2)})`);
+    });
+  }
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let W = 0, H = 0, dpr = 1, idx = 0, spring = 0, frame = 0;
   let P = [];
+  // Pre-built colour table: 72 hues x 4 brightness steps, so the hot loop never builds strings.
+  const COL = Array.from({ length: 72 }, (_, h) => [0, 1, 2, 3].map(l => `hsl(${h * 5} 95% ${58 + l * 10}%)`));
   const mouse = { x: -1e4, y: -1e4 };
 
   function sample(text) {
@@ -87,13 +150,13 @@
     o.textAlign = "center"; o.textBaseline = "middle"; o.fillStyle = "#fff";
     const lh = size * 1.15, y0 = H / 2 - (lines.length - 1) * lh / 2;
     lines.forEach((l, i) => o.fillText(l, W / 2, y0 + i * lh));
-    const step = Math.max(3, Math.round(size / 42));
+    const step = Math.max(2, Math.round(size / 73));
     const data = o.getImageData(0, 0, W, H).data, pts = [];
     for (let y = 0; y < H; y += step)
       for (let x = 0; x < W; x += step)
         if (data[(y * W + x) * 4 + 3] > 140) pts.push([x, y]);
     for (let i = pts.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [pts[i], pts[j]] = [pts[j], pts[i]]; }
-    return { pts, dot: Math.max(1.5, step * 0.62) };
+    return { pts, dot: Math.max(1.2, step * 0.7) };
   }
 
   let dot = 2;
@@ -117,6 +180,7 @@
     $("count").textContent = P.length.toLocaleString();
     $("lang").textContent = lang;
     $("said").textContent = text;
+    say(text.split(/[,，、\s]/)[0].replace(/[!¡]/g, "") + "!");
     document.title = text;
   }
 
@@ -142,6 +206,7 @@
   function tick(now) {
     fps += (1000 / Math.max(1, now - last) - fps) * 0.05; last = now;
     if (++frame % 15 === 0) $("fps").textContent = Math.round(fps);
+    look();
     spring = Math.min(1, spring + 0.012);
     const t = now / 1000, R = Math.min(W, H) * 0.14, R2 = R * R;
     ctx.globalCompositeOperation = "source-over";
@@ -156,8 +221,7 @@
       if (d2 < R2 && !calm) { const d = Math.sqrt(d2) || 1, f = (1 - d / R) * 4.5; p.vx += dx / d * f; p.vy += dy / d * f; }
       p.x += p.vx; p.y += p.vy;
       const sp = Math.min(1, Math.hypot(p.vx, p.vy) / 12);
-      const hue = (p.tx / W * 300 + t * 60) % 360;
-      ctx.fillStyle = `hsl(${hue} 95% ${58 + sp * 30}%)`;
+      ctx.fillStyle = COL[((p.tx / W * 300 + t * 60) % 360) / 5 | 0][sp * 3.99 | 0];
       ctx.fillRect(p.x - dot / 2, p.y - dot / 2, dot, dot);
     }
     requestAnimationFrame(tick);
@@ -167,6 +231,7 @@
   cvs.addEventListener("pointermove", point);
   cvs.addEventListener("pointerdown", e => { point(e); burst(mouse.x, mouse.y); });
   cvs.addEventListener("pointerleave", () => { mouse.x = mouse.y = -1e4; });
+  buddy.addEventListener("click", () => burst(W / 2, H / 2));
   $("next").addEventListener("click", () => burst(W / 2, H / 2));
   addEventListener("keydown", e => { if (e.key === " " && e.target === document.body) { e.preventDefault(); burst(W / 2, H / 2); } });
   let rt;
