@@ -3,6 +3,7 @@
 These rules apply to every project of jaablesa's. Reasoning and alternatives are in `DECISIONS.md`. Ask before departing from them.
 
 - New projects start from `jaablesa/template-vite` (browser-only demos) or `jaablesa/template-next` (products with server code, data or login). Don't scaffold from scratch.
+- Operate services through their APIs and CLIs, never by asking the owner to use a dashboard. Run `bin/doctor` first; if a service is blocked or a credential is missing, report the exact host or variable from `docs/agent-access.md`. Only the human-only actions listed there may be handed to the owner.
 - Agent instructions live only in `AGENTS.md` (plus nested `AGENTS.md` files for subfolders). Never create `CLAUDE.md`, `.cursorrules`, `GEMINI.md` or other tool-specific instruction files.
 - One GitHub repo per project. pnpm, Node 22, TypeScript, Biome. No ESLint or Prettier.
 - Public things are served from Vercel on a subdomain of the owner's domain. Never treat GitHub Pages, artifacts or gists as the place a public demo lives.

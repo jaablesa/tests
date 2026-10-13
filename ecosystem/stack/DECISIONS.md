@@ -10,12 +10,13 @@ Every layer, the pick, why, the alternative, and the signal that means it's time
 4. **Services stay inactive without keys.** Templates run locally and in forks with zero accounts.
 5. **Prefer portable over clever.** Postgres, standard web APIs, and SQL migrations in git.
 6. **The harness is agent-agnostic.** Instructions for coding agents live only in `AGENTS.md`, the open standard read by Codex, Cursor, Copilot, Gemini CLI and others. No tool-specific files like `CLAUDE.md`.
+7. **Agent-operable first.** Every service must be fully operable through an API, CLI or Terraform provider with a scoped token. A tool that needs a human in its dashboard for routine work fails this test. See `docs/agent-access.md`.
 
 ## Foundation
 
 | Layer | Pick | Why | Alternative | Switch when |
 |---|---|---|---|---|
-| Domain and DNS | **Cloudflare** | Registration at cost, the fastest DNS, free DDoS protection and SSL, and the door to Workers and R2 later | Porkbun (registrar) with DNS elsewhere | Cloudflare's registrar doesn't support a TLD you want |
+| Domain and DNS | **Cloudflare** | Its API lets agents manage DNS (Namecheap's API needs a whitelisted fixed IP, which cloud agents don't have). Registration at cost, the fastest DNS, free DDoS protection and SSL, and the door to Workers and R2 later | Porkbun (registrar) with DNS elsewhere | Cloudflare's registrar doesn't support a TLD you want |
 | Code | **One GitHub repo per project** | Clean ownership and history; any project can be open-sourced or handed off alone | One monorepo (pnpm + Turborepo) | You're copying the same code between more than three projects every month |
 | Project starters | **Two templates**: `template-vite` (demos), `template-next` (products) | Demos stay tiny and fast; products get server code, data and login | One Next.js template for everything | Maintaining two templates costs more than demos gain from being light |
 | Hosting (default) | **Vercel** | Deploys on push, preview URL on every PR, built-in preview images and domains, already connected | Cloudflare Pages/Workers | See "When to move to Cloudflare" below |
@@ -27,6 +28,7 @@ Every layer, the pick, why, the alternative, and the signal that means it's time
 | Lint and format | **Biome** | One fast tool replaces ESLint and Prettier; same config in every repo | ESLint + Prettier | You need a plugin that only ESLint has |
 | Dependency updates | **Renovate** | Weekly batches; dev-tool minors and patches merge themselves when CI passes | Dependabot | You want zero setup and don't mind a noisier PR stream |
 | Agent instructions | **`AGENTS.md` only** | One open format every major coding agent reads; switching agents costs nothing | Tool-specific files (`CLAUDE.md`, `.cursorrules`) | Never; if an agent can't read `AGENTS.md`, point it there from its own settings, not a second file |
+| Agent access | **Scoped tokens as network secrets in the Claude Code environment**, copies in 1Password | Agents get each credential directly, only for the hosts that need it, and new sessions (including the weekly review) inherit them | A 1Password service account read with the `op` CLI | You run agents across several platforms and want one secret to hand out |
 | CI | **GitHub Actions** | Runs lint and build on every PR, next to the code | None needed; Vercel's build is the fallback check | n/a |
 
 ## Per project
