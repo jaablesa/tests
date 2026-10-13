@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Codeless Bridge Stack</title>
+<meta name="description" content="How Codeless Bridge projects are built, hosted and watched: every tool, why it was picked, its alternative, and what's left to set up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: an engineer's blueprint. A status band, a wiring diagram, then the parts list (layers), the decision helper, and the remaining build steps. */
+  :root {
+    --paper: #f3f6fa;
+    --sheet: #ffffff;
+    --ink: #13233b;
+    --ink-2: #4b5a72;
+    --rule: #d6dee9;
+    --grid: #e6ecf4;
+    --accent: #e8590c;
+    --accent-soft: #fde7da;
+    --live: #1f8a4c;
+    --live-soft: #ddf3e6;
+    --ready: #2861c9;
+    --ready-soft: #e0eafb;
+    --todo: #a86400;
+    --todo-soft: #fbefd6;
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+    --body: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0b1424; --sheet: #111d31; --ink: #e2e9f4; --ink-2: #9aa9c0; --rule: #24344f; --grid: #16243b;
+      --accent: #ff8a4c; --accent-soft: #3a2316; --live: #4fcb83; --live-soft: #12301f;
+      --ready: #79a6ff; --ready-soft: #15264a; --todo: #f3b34c; --todo-soft: #33260f; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0b1424; --sheet: #111d31; --ink: #e2e9f4; --ink-2: #9aa9c0; --rule: #24344f; --grid: #16243b;
+    --accent: #ff8a4c; --accent-soft: #3a2316; --live: #4fcb83; --live-soft: #12301f;
+    --ready: #79a6ff; --ready-soft: #15264a; --todo: #f3b34c; --todo-soft: #33260f; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 var(--body);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 80px; display: grid; gap: 56px; }
+  h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); letter-spacing: -0.02em; }
+  h2 { font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -0.01em; }
+  h3 { font-size: 1.15rem; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--ready); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  code { font-family: var(--mono); font-size: 0.88em; background: var(--grid); padding: 1px 5px; border-radius: 4px; }
+  .label { font: 500 12px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
+  .section-head { display: grid; gap: 10px; }
+  .wrap > *, .section-head > * { min-width: 0; }
+  .sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; }
+
+  /* Header */
+  header { display: grid; gap: 18px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font: 13px var(--mono); color: var(--ink-2); }
+  .meta b { color: var(--ink); font-weight: 500; }
+  .status-band { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .stat { padding: 16px; display: grid; gap: 6px; }
+  .stat .pill { white-space: normal; line-height: 1.3; }
+  .stat .n { font: 700 2rem/1 var(--display); font-variant-numeric: tabular-nums; }
+  .stat.live .n { color: var(--live); } .stat.ready .n { color: var(--ready); } .stat.todo .n { color: var(--todo); }
+  .progress { height: 10px; border-radius: 99px; background: var(--grid); overflow: hidden; display: flex; }
+  .progress span { display: block; height: 100%; }
+
+  /* Pills */
+  .pill { display: inline-flex; align-items: center; gap: 6px; font: 500 11px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 99px; white-space: nowrap; }
+  .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill.live { color: var(--live); background: var(--live-soft); }
+  .pill.ready { color: var(--ready); background: var(--ready-soft); }
+  .pill.todo { color: var(--todo); background: var(--todo-soft); }
+  .pill.later { color: var(--ink-2); background: var(--grid); }
+
+  /* Diagram */
+  .diagram { overflow-x: auto; padding: 20px; }
+  .diagram svg { display: block; min-width: 760px; width: 100%; height: auto; }
+  .diagram text { font-family: var(--mono); fill: var(--ink); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 0 20px 18px; }
+
+  /* Lifecycle */
+  .flow { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; counter-reset: step; }
+  .flow li { list-style: none; padding: 16px; display: grid; gap: 6px; align-content: start; counter-increment: step; }
+  .flow li::before { content: counter(step); font: 700 1.6rem/1 var(--display); color: var(--accent); }
+  .flow ol { margin: 0; padding: 0; }
+
+  /* Layers */
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+  .filters button { font: 500 13px var(--body); color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 99px; padding: 7px 14px; cursor: pointer; }
+  .filters button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .layers { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .layer { padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .layer-top { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+  .layer .what { color: var(--ink-2); font-size: 0.95rem; }
+  .pick { font: 700 1.35rem/1.2 var(--display); }
+  .kv { display: grid; grid-template-columns: 84px 1fr; gap: 6px 12px; font-size: 0.93rem; margin: 0; }
+  .kv dt { font: 500 11px/1.9 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+  .kv dd { margin: 0; min-width: 0; }
+  .alt { border-top: 1px dashed var(--rule); padding-top: 12px; display: grid; gap: 4px; font-size: 0.93rem; }
+  .alt b { font-weight: 600; }
+
+  /* Chooser */
+  .chooser { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 0; overflow: hidden; }
+  .chooser fieldset { border: 0; margin: 0; padding: 22px; display: grid; gap: 10px; }
+  .chooser legend { padding: 0; margin-bottom: 8px; }
+  .check { display: flex; gap: 10px; align-items: start; font-size: 0.95rem; cursor: pointer; }
+  .check input { margin-top: 5px; accent-color: var(--accent); }
+  .verdict { padding: 22px; background: var(--grid); display: grid; gap: 10px; align-content: start; }
+  .verdict .pick { font-size: 1.6rem; }
+  @media (max-width: 720px) { .chooser { grid-template-columns: 1fr; } }
+
+  /* Steps */
+  .steps { display: grid; gap: 10px; }
+  .step { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; padding: 16px 18px; align-items: start; }
+  .step input { width: 20px; height: 20px; margin-top: 3px; accent-color: var(--live); }
+  .step .body { display: grid; gap: 6px; min-width: 0; }
+  .step h3 { font-size: 1.05rem; }
+  .step.done h3 { text-decoration: line-through; color: var(--ink-2); }
+  .step .why { color: var(--ink-2); font-size: 0.93rem; }
+  .step ul { margin: 4px 0 0; padding-left: 20px; font-size: 0.93rem; }
+  .who { display: grid; gap: 6px; justify-items: end; text-align: right; }
+  .who .t { font: 12px var(--mono); color: var(--ink-2); }
+  @media (max-width: 560px) { .step { grid-template-columns: auto 1fr; } .who { grid-column: 2; justify-items: start; text-align: left; } }
+
+  /* Glossary & review */
+  .gloss { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .gloss details { padding: 14px 16px; }
+  .gloss summary { font-weight: 600; cursor: pointer; }
+  .gloss details p { margin-top: 8px; color: var(--ink-2); font-size: 0.93rem; }
+  .review { padding: 20px; display: grid; gap: 14px; }
+  .log { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .log li { display: grid; grid-template-columns: 110px 1fr; gap: 12px; font-size: 0.93rem; }
+  .log time { font: 13px var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: no-preference) { .layer, .step { transition: border-color .15s; } .layer:hover, .step:hover { border-color: var(--accent); } }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header>
+    <span class="label">Build environment · jaablesa · codelessbridge.com</span>
+    <h1>How Codeless Bridge ships things</h1>
+    <p>Every project goes from an idea to a live URL on <code>codelessbridge.com</code> the same way, with errors, analytics and uptime checks from its first deploy. This page explains each part, why it was chosen, what the alternative is, and what's still left to set up.</p>
+    <div class="meta" id="meta"></div>
+    <div class="status-band" id="status"></div>
+    <div class="progress" id="progress" role="img"></div>
+  </header>
+
+  <section class="section-head" aria-labelledby="map-h">
+    <span class="label">The wiring</span>
+    <h2 id="map-h">One domain, many projects, shared watchers</h2>
+    <p>Visitors only ever see <code>codelessbridge.com</code>. Cloudflare answers "where does this name live?", Vercel serves each project, and three services watch every deploy. GitHub only stores code; it never serves anything public.</p>
+    <figure class="sheet" style="margin:0">
+      <div class="diagram">
+        <svg viewBox="0 0 960 420" role="img" aria-labelledby="svg-t">
+          <title id="svg-t">Visitors reach Cloudflare DNS for codelessbridge.com, which points each subdomain at a Vercel project. Each Vercel project is built from its own GitHub repo, started from template-vite or template-next. Sentry, PostHog and Better Stack watch every project; Supabase serves products.</title>
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-2)"/></marker>
+          </defs>
+          <g fill="none" stroke="var(--ink-2)" stroke-width="1.5" marker-end="url(#arr)">
+            <path d="M120 210 H188"/>
+            <path d="M350 210 C380 210 380 110 412 110"/>
+            <path d="M350 210 H412"/>
+            <path d="M350 210 C380 210 380 310 412 310"/>
+            <path d="M648 60 V84" stroke-dasharray="4 4"/>
+            <path d="M560 380 V340" stroke-dasharray="4 4"/>
+          </g>
+          <g fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 5">
+            <path d="M600 110 H700"/><path d="M600 210 H700"/><path d="M600 310 H700"/>
+          </g>
+          <!-- visitor -->
+          <rect x="20" y="180" width="100" height="60" rx="8" fill="var(--sheet)" stroke="var(--rule)"/>
+          <text x="70" y="207" text-anchor="middle" font-size="13">Visitor</text>
+          <text x="70" y="225" text-anchor="middle" font-size="11" fill="var(--ink-2)">browser / X</text>
+          <!-- cloudflare -->
+          <rect x="190" y="170" width="160" height="80" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+          <text x="270" y="200" text-anchor="middle" font-size="13" font-weight="500">Cloudflare DNS</text>
+          <text x="270" y="220" text-anchor="middle" font-size="11" fill="var(--ink-2)">codelessbridge.com</text>
+          <text x="270" y="236" text-anchor="middle" font-size="11" fill="var(--ink-2)">*.codelessbridge.com</text>
+          <!-- vercel projects -->
+          <g font-size="12">
+            <rect x="414" y="84" width="186" height="52" rx="8" fill="var(--sheet)" stroke="var(--ready)"/>
+            <text x="507" y="106" text-anchor="middle" font-weight="500">hello.codelessbridge.com</text>
+            <text x="507" y="124" text-anchor="middle" font-size="11" fill="var(--ink-2)">Vercel ← repo hello-world</text>
+            <rect x="414" y="184" width="186" height="52" rx="8" fill="var(--sheet)" stroke="var(--rule)"/>
+            <text x="507" y="206" text-anchor="middle" font-weight="500" font-size="11">&lt;demo&gt;.codelessbridge.com</text>
+            <text x="507" y="224" text-anchor="middle" font-size="11" fill="var(--ink-2)">Vercel ← template-vite</text>
+            <rect x="414" y="284" width="186" height="52" rx="8" fill="var(--sheet)" stroke="var(--rule)"/>
+            <text x="507" y="306" text-anchor="middle" font-weight="500" font-size="11">&lt;product&gt;.codelessbridge.com</text>
+            <text x="507" y="324" text-anchor="middle" font-size="11" fill="var(--ink-2)">Vercel ← template-next</text>
+          </g>
+          <!-- github -->
+          <rect x="560" y="12" width="176" height="48" rx="8" fill="var(--grid)" stroke="var(--rule)"/>
+          <text x="648" y="33" text-anchor="middle" font-size="12" font-weight="500">GitHub · one repo each</text>
+          <text x="648" y="50" text-anchor="middle" font-size="11" fill="var(--ink-2)">push → Vercel deploys</text>
+          <!-- supabase -->
+          <rect x="470" y="380" width="180" height="34" rx="8" fill="var(--grid)" stroke="var(--rule)"/>
+          <text x="560" y="402" text-anchor="middle" font-size="12">Supabase (products only)</text>
+          <!-- watchers -->
+          <g font-size="12">
+            <rect x="702" y="84" width="236" height="52" rx="8" fill="var(--sheet)" stroke="var(--accent)"/>
+            <text x="820" y="106" text-anchor="middle" font-weight="500">Sentry · errors</text>
+            <text x="820" y="124" text-anchor="middle" font-size="11" fill="var(--ink-2)">stack traces, releases</text>
+            <rect x="702" y="184" width="236" height="52" rx="8" fill="var(--sheet)" stroke="var(--accent)"/>
+            <text x="820" y="206" text-anchor="middle" font-weight="500">PostHog · analytics</text>
+            <text x="820" y="224" text-anchor="middle" font-size="11" fill="var(--ink-2)">events, flags, replays</text>
+            <rect x="702" y="284" width="236" height="52" rx="8" fill="var(--sheet)" stroke="var(--accent)"/>
+            <text x="820" y="306" text-anchor="middle" font-weight="500">Better Stack · uptime</text>
+            <text x="820" y="324" text-anchor="middle" font-size="11" fill="var(--ink-2)">alerts, status page</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption class="legend">
+        <span class="pill ready">serves visitors</span>
+        <span class="pill todo" style="color:var(--accent);background:var(--accent-soft)">watches every project</span>
+        <span class="pill later">supports the build</span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="section-head" aria-labelledby="flow-h">
+    <span class="label">The routine</span>
+    <h2 id="flow-h">From idea to live URL</h2>
+    <p>The same five moves for every project. The full checklist is in <code>stack/docs/new-project.md</code>.</p>
+    <ol class="flow">
+      <li class="sheet"><h3>Pick a template</h3><p>Browser-only demo → <code>template-vite</code>. Accounts, data or server code → <code>template-next</code>.</p></li>
+      <li class="sheet"><h3>Create the repo</h3><p>"Use this template" on GitHub. It arrives with lint, CI, telemetry and agent rules already wired.</p></li>
+      <li class="sheet"><h3>Import in Vercel</h3><p>Paste env vars from 1Password. Every push to <code>main</code> deploys; every PR gets a preview link.</p></li>
+      <li class="sheet"><h3>Add a subdomain</h3><p>Vercel shows a CNAME; add it in Cloudflare with the proxy off. HTTPS is automatic.</p></li>
+      <li class="sheet"><h3>Switch on watchers</h3><p>Sentry and PostHog keys in Vercel, a Better Stack monitor. Done means one test error and one pageview arrived.</p></li>
+    </ol>
+  </section>
+
+  <section class="section-head" aria-labelledby="layers-h">
+    <span class="label">The parts list</span>
+    <h2 id="layers-h">Every layer, why it won, and its runner-up</h2>
+    <p>Each card says what the layer is in plain words, the pick, the alternative, and the signal that would make us switch. Revisit a card only when its signal happens.</p>
+    <div class="filters" role="group" aria-label="Filter layers" id="filters"></div>
+    <div class="layers" id="layers"></div>
+  </section>
+
+  <section class="section-head" aria-labelledby="choose-h">
+    <span class="label">Decision helper</span>
+    <h2 id="choose-h">Supabase, or Neon + Clerk?</h2>
+    <p>Supabase is the default for products. Tick what's true about the project you're about to start and the helper says which way to go and why.</p>
+    <div class="sheet chooser">
+      <fieldset id="chooser">
+        <legend class="label">This project…</legend>
+      </fieldset>
+      <div class="verdict" aria-live="polite" id="verdict"></div>
+    </div>
+  </section>
+
+  <section class="section-head" aria-labelledby="steps-h">
+    <span class="label">What's missing</span>
+    <h2 id="steps-h">Remaining steps, in order</h2>
+    <p>Each step says who does it and why it matters. Ticks are saved in this browser only, as a personal checklist; the source of truth is the weekly review.</p>
+    <div class="steps" id="steps"></div>
+  </section>
+
+  <section class="section-head" aria-labelledby="gloss-h">
+    <span class="label">Words used here</span>
+    <h2 id="gloss-h">Glossary</h2>
+    <div class="gloss" id="gloss"></div>
+  </section>
+
+  <section class="section-head" aria-labelledby="review-h">
+    <span class="label">Kept current</span>
+    <h2 id="review-h">Weekly review</h2>
+    <div class="sheet review">
+      <p>Every Monday an agent re-checks each layer: new major versions, pricing or free-tier changes, deprecations, security notices, and whether a "switch when" signal has happened. Changes arrive as a pull request on <code>jaablesa/stack</code> that updates this page and <code>DECISIONS.md</code>; nothing switches without your approval.</p>
+      <ul class="log" id="log"></ul>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ===== Content. The weekly review edits this block; the page renders from it. ===== */
+const ENV = {
+  reviewed: "2026-10-13",
+  nextReview: "2026-10-19",
+  owner: "jaablesa",
+  domain: "codelessbridge.com",
+  // status: live (running), ready (built, needs a hand-off), todo (not started), later (only when a project needs it)
+  layers: [
+    { group: "Foundation", name: "Domain and DNS", what: "The phone book that turns codelessbridge.com into the address of the right server.", pick: "Cloudflare", why: "At-cost domain renewals, the fastest DNS, free DDoS protection and SSL, and Workers and R2 one click away later.", alt: "Porkbun registrar, DNS elsewhere", switchWhen: "Cloudflare's registrar doesn't support a domain ending you want.", status: "todo", note: "Verified 2026-10-13: DNS is at Namecheap, the apex points at Vercel. Cloudflare move still to do." },
+    { group: "Foundation", name: "Code", what: "Where source code and its history live.", pick: "GitHub, one repo per project", why: "Clean history and ownership per project; any project can be open-sourced or handed off alone.", alt: "One monorepo (pnpm + Turborepo)", switchWhen: "You copy the same code between more than three projects a month.", status: "ready", note: "Four repos built; waiting to be created on GitHub." },
+    { group: "Foundation", name: "Project starters", what: "Copy-ready projects so every new idea begins with the plumbing done.", pick: "template-vite + template-next", why: "Demos stay a few KB; products get server code, data and login. Both ship lint, CI, telemetry and agent rules.", alt: "One Next.js template for everything", switchWhen: "Keeping two templates in sync costs more than demos gain from being light.", status: "ready", note: "Both build and pass lint." },
+    { group: "Foundation", name: "Hosting", what: "The computers that actually serve your pages to visitors.", pick: "Vercel", why: "Deploys on every push, preview URL per PR, automatic HTTPS and link previews; already connected to your account.", alt: "Cloudflare Pages / Workers", switchWhen: "Bandwidth bills outgrow the product, or a project needs Durable Objects, Queues or R2 next to it.", status: "live", note: "Team \"Jose's projects\" already serves codelessbridge.com (Next.js). Claude's Vercel connector can read but not create projects (403)." },
+    { group: "Foundation", name: "Long-running servers", what: "Always-on processes: WebSockets, workers, bots.", pick: "Fly.io, only when needed", why: "Real VMs in regions near users, for things serverless can't do.", alt: "Railway", switchWhen: "You'd rather click than configure.", status: "later" },
+    { group: "Watchers", name: "Errors", what: "Tells you when code breaks for a real visitor, with the exact line.", pick: "Sentry", why: "The standard. Source maps are uploaded at build time and never served publicly.", alt: "Highlight.io", switchWhen: "You want errors and session replay in one open-source tool.", status: "todo", note: "Wired into both templates; account needed." },
+    { group: "Watchers", name: "Analytics", what: "What visitors actually do: pages, clicks, funnels.", pick: "PostHog (EU cloud)", why: "Analytics, feature flags, A/B tests and session replay in one generous free tier.", alt: "Plausible", switchWhen: "You only need page views and want no cookie banner.", status: "todo", note: "hello-world already sends city_visited." },
+    { group: "Watchers", name: "Uptime", what: "Pings every live URL and wakes you if one goes down.", pick: "Better Stack", why: "Phone and email alerts plus a public status page.", alt: "UptimeRobot", switchWhen: "Free and basic is enough.", status: "todo" },
+    { group: "Workflow", name: "Secrets", what: "Passwords and API keys, kept out of code.", pick: "1Password → Vercel env vars", why: "One source of truth you already trust; nothing secret ever reaches git.", alt: "Doppler", switchWhen: "Secrets need syncing to several platforms automatically.", status: "todo", note: "Create a vault named Dev." },
+    { group: "Workflow", name: "Lint and format", what: "Automatic code style and bug-pattern checks.", pick: "Biome", why: "One fast tool replaces ESLint and Prettier, same config everywhere.", alt: "ESLint + Prettier", switchWhen: "You need a plugin only ESLint has.", status: "live", note: "In every template." },
+    { group: "Workflow", name: "Dependency updates", what: "Keeps libraries current without you checking.", pick: "Renovate", why: "Weekly batches; small dev-tool updates merge themselves when CI passes.", alt: "Dependabot", switchWhen: "You want zero setup and accept noisier PRs.", status: "todo", note: "Config in every repo; install the GitHub App." },
+    { group: "Workflow", name: "CI", what: "Runs checks on every pull request before anything ships.", pick: "GitHub Actions", why: "Lives next to the code; lint and build on every PR.", alt: "Vercel's build as the only check", switchWhen: "Never needed so far.", status: "ready", note: "Workflows written; run once repos exist." },
+    { group: "Workflow", name: "Agent access", what: "How agents get permission to operate each service without you.", pick: "Scoped tokens as Claude environment secrets", why: "Each token only works for its own service's hosts, and every new session, including the weekly review, inherits them.", alt: "1Password service account read with the op CLI", switchWhen: "You run agents across several platforms and want one secret to hand out.", status: "todo", note: "bin/doctor: only GitHub reachable today." },
+    { group: "Workflow", name: "Agent instructions", what: "The rules coding agents follow in each repo.", pick: "AGENTS.md only", why: "One open format read by Claude Code, Codex, Cursor, Copilot and Gemini CLI, so switching agents costs nothing.", alt: "Tool-specific files (CLAUDE.md, .cursorrules)", switchWhen: "Never. Claude Code reads AGENTS.md when no CLAUDE.md exists (v2.1.277+).", status: "live", note: "No user-level AGENTS.md exists, so global rules live in each repo." },
+    { group: "Per project", name: "Demo framework", what: "What demos and toys are built with.", pick: "Vite + TypeScript", why: "No framework weight; Hello World ships 8.8 KB of its own JS.", alt: "Astro", switchWhen: "The demo is mostly content pages.", status: "live" },
+    { group: "Per project", name: "Product framework", what: "What real products with accounts are built with.", pick: "Next.js 16 + Tailwind", why: "Best Vercel fit; server code, data and SEO in one place.", alt: "Astro + islands; CSS Modules instead of Tailwind", switchWhen: "The product is mostly static.", status: "ready" },
+    { group: "Per project", name: "Data, login, storage", what: "Database, user accounts and file uploads.", pick: "Supabase", why: "Postgres, login, storage and realtime in one place, with row-level security and SQL migrations in git.", alt: "Neon + Clerk", switchWhen: "Use the decision helper below.", status: "later" },
+    { group: "Per project", name: "Email", what: "Sign-up confirmations, receipts, notifications.", pick: "Resend", why: "Clean API and React email templates.", alt: "Postmark", switchWhen: "Delivery of important emails like password resets matters most.", status: "later" },
+    { group: "Per project", name: "Payments", what: "Taking money.", pick: "Stripe", why: "The default for a reason.", alt: "Lemon Squeezy", switchWhen: "You want sales tax handled for you as merchant of record.", status: "later" },
+  ],
+  neonSignals: [
+    ["Needs a full database copy for every PR preview", "Neon creates a database branch per preview in seconds; Supabase branching is heavier and costs more."],
+    ["Sells to businesses: organizations, roles, SSO/SAML", "Clerk ships organizations, roles, SSO and user-management screens ready-made."],
+    ["Login must survive a future database change", "With Clerk, users aren't tied to one Postgres provider."],
+    ["Traffic is bursty or mostly idle", "Neon scales to zero and wakes per request; a Supabase project runs continuously."],
+    ["Avoiding lock-in matters more than convenience", "Neon is plain Postgres; Supabase couples data, login, storage and APIs."],
+  ],
+  supabaseSignals: [
+    ["Wants realtime updates (live cursors, chat, presence)", "Supabase Realtime is built in."],
+    ["Stores user files (avatars, uploads)", "Supabase Storage shares login and permissions with the database."],
+    ["Wants one bill and one dashboard", "Data, login and storage under one account."],
+  ],
+  steps: [
+    { title: "Check what's live on codelessbridge.com today", who: "Agent", time: "Done", done: true, why: "Moving DNS without knowing what's there can take the site or email down.", detail: ["Verified: Vercel project \"codelessbridge\" (Next.js) serves www.codelessbridge.com; the bare domain redirects to www (308).", "Verified: DNS is at Namecheap (dns1/dns2.registrar-servers.com); the apex A record is 216.198.79.1 (Vercel)."] },
+    { title: "Bootstrap agent access (one time)", who: "You", time: "20 min, once", why: "No service lets software grant itself access. You create each account and one scoped token per service; after that, agents operate everything through APIs and you never need these dashboards for routine work.", detail: ["Follow stack/docs/agent-access.md: one table with where to create each token, its exact permissions, the variable name and the hosts to allow.", "Add the tokens as Network secrets and the hosts as Allowed domains in the Claude Code environment (environment menu in the session title bar → Edit).", "Today bin/doctor reports: GitHub OK for attached repos only; Vercel, Cloudflare, Sentry, PostHog, Better Stack and Supabase blocked by the network policy."] },
+    { title: "Point the nameservers at Cloudflare (one time)", who: "You", time: "2 min", why: "The only registrar action. Namecheap's API needs a whitelisted fixed IP, which cloud agents don't have, so agents can't manage DNS while it stays there.", detail: ["The agent adds the domain to Cloudflare by API, copies every record, and tells you the two nameservers to paste at Namecheap."] },
+    { title: "Create the repos and push each project", who: "Agent", time: "5 min", why: "With GH_ADMIN_TOKEN the agent creates stack, template-vite, template-next and hello-world, pushes each folder, and marks the two templates as template repositories.", detail: [] },
+    { title: "Put hello-world live at hello.codelessbridge.com", who: "Agent", time: "5 min", why: "Gives the X post a real, fast, branded link with a proper preview card.", detail: ["Vercel API: create the project from jaablesa/hello-world and add the domain.", "Cloudflare API: add the CNAME record.", "Verify the page loads over HTTPS and the preview card renders."] },
+    { title: "Wire errors, analytics and uptime", who: "Agent", time: "10 min", why: "Every project is observable from its first deploy.", detail: ["Create the Sentry and PostHog projects by API and set their keys as Vercel environment variables.", "Create the Better Stack monitor for hello.codelessbridge.com.", "Install Renovate: the one GitHub App install is a human-only action unless a token with app-installation rights exists; the agent will ask if needed."] },
+    { title: "Weekly review opens its own PRs", who: "Agent", time: "Automatic", why: "Once GH_ADMIN_TOKEN is in the environment, the scheduled review inherits it and opens PRs itself instead of sending you a link.", detail: [] },
+    { title: "Close the staging pull request", who: "Agent", time: "1 min", why: "jaablesa/tests#1 was only a staging area; the code will live in its own repos.", detail: [] },
+  ],
+  glossary: [
+    ["DNS", "The internet's phone book. It maps a name like hello.codelessbridge.com to the server that answers."],
+    ["Nameservers", "The servers that hold your domain's DNS records. Pointing them at Cloudflare hands DNS to Cloudflare."],
+    ["CNAME", "A DNS record that says \"this name is an alias for that one\", e.g. hello → Vercel's address."],
+    ["Preview deployment", "A private copy of the site built from a pull request, so you can click around before merging."],
+    ["Environment variable", "A setting given to the app at build or run time, like an API key, kept outside the code."],
+    ["Source map", "A file that maps minified code back to your original lines, so error reports point at real code."],
+    ["CI", "Continuous integration: automatic checks that run on every change before it ships."],
+    ["Row-level security", "Database rules that decide, per row, which logged-in user can read or change it."],
+    ["AGENTS.md", "A plain Markdown file of instructions that coding agents read when they open a repo."],
+    ["Template repository", "A GitHub repo you can copy in one click to start a new project with everything set up."],
+  ],
+  log: [
+    ["2026-10-13", "Redesigned for agent operation: bin/doctor shows the network policy blocks every service API except GitHub. One bootstrap (accounts + scoped tokens + allowed domains + one nameserver change) is the only human work left; every other step is now the agent's."],
+    ["2026-10-13", "Troubleshooting: codelessbridge.com is already on Vercel (Next.js site) with DNS at Namecheap, so hello-world can go live with one CNAME before any Cloudflare move. GitHub repo creation and Vercel project creation are both refused for Claude's connectors (403) and stay with you."],
+    ["2026-10-13", "First version. Stack chosen, four repos built and staged, domain set to codelessbridge.com, AGENTS.md-only harness adopted."],
+  ],
+};
+
+/* ===== Rendering ===== */
+const $ = (s) => document.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) k === "class" ? (n.className = v) : n.setAttribute(k, v);
+  for (const k of kids) n.append(k);
+  return n;
+};
+const STATUS = { live: "In place", ready: "Built, needs hand-off", todo: "To set up", later: "When needed" };
+const pill = (s) => el("span", { class: `pill ${s}` }, STATUS[s]);
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+$("#meta").append(
+  el("span", {}, "Last reviewed ", el("b", {}, ENV.reviewed)),
+  el("span", {}, "Next review ", el("b", {}, ENV.nextReview)),
+  el("span", {}, "GitHub ", el("b", {}, ENV.owner)),
+  el("span", {}, "Domain ", el("b", {}, ENV.domain)),
+);
+
+const counts = { live: 0, ready: 0, todo: 0, later: 0 };
+for (const l of ENV.layers) counts[l.status]++;
+for (const s of ["live", "ready", "todo", "later"]) {
+  $("#status").append(el("div", { class: `sheet stat ${s}` }, el("span", { class: "n" }, String(counts[s])), pill(s)));
+}
+const total = ENV.layers.length;
+const colors = { live: "var(--live)", ready: "var(--ready)", todo: "var(--todo)", later: "var(--rule)" };
+for (const s of ["live", "ready", "todo", "later"]) {
+  const span = el("span"); span.style.width = `${(counts[s] / total) * 100}%`; span.style.background = colors[s];
+  $("#progress").append(span);
+}
+$("#progress").setAttribute("aria-label", `${counts.live} of ${total} layers in place, ${counts.ready} built, ${counts.todo} to set up, ${counts.later} only when needed`);
+
+const groups = ["All", ...new Set(ENV.layers.map((l) => l.group))];
+let active = store.get("layer-filter") || "All";
+function renderLayers() {
+  $("#layers").replaceChildren(...ENV.layers.filter((l) => active === "All" || l.group === active).map((l) =>
+    el("article", { class: "sheet layer" },
+      el("div", { class: "layer-top" }, el("span", { class: "label" }, `${l.group} · ${l.name}`), pill(l.status)),
+      el("div", { class: "pick" }, l.pick),
+      el("p", { class: "what" }, l.what),
+      el("dl", { class: "kv" }, el("dt", {}, "Why"), el("dd", {}, l.why), ...(l.note ? [el("dt", {}, "Now"), el("dd", {}, l.note)] : [])),
+      el("div", { class: "alt" }, el("span", {}, el("b", {}, "Alternative: "), l.alt), el("span", {}, el("b", {}, "Switch when: "), l.switchWhen)),
+    )));
+  for (const b of $("#filters").children) b.setAttribute("aria-pressed", String(b.dataset.g === active));
+}
+for (const g of groups) {
+  const b = el("button", { type: "button", "aria-pressed": "false" }, g);
+  b.dataset.g = g;
+  b.addEventListener("click", () => { active = g; store.set("layer-filter", g); renderLayers(); });
+  $("#filters").append(b);
+}
+renderLayers();
+
+const signals = [...ENV.neonSignals.map(([t, w]) => ({ t, w, side: "neon" })), ...ENV.supabaseSignals.map(([t, w]) => ({ t, w, side: "supa" }))];
+signals.forEach((s, i) => {
+  const input = el("input", { type: "checkbox", id: `sig-${i}` });
+  input.addEventListener("change", verdict);
+  $("#chooser").append(el("label", { class: "check", for: `sig-${i}` }, input, el("span", {}, s.t)));
+});
+function verdict() {
+  const on = signals.filter((_, i) => $(`#sig-${i}`).checked);
+  const neon = on.filter((s) => s.side === "neon"), supa = on.filter((s) => s.side === "supa");
+  const pickNeon = neon.length > supa.length;
+  const reasons = (pickNeon ? neon : supa).map((s) => el("li", {}, s.w));
+  $("#verdict").replaceChildren(
+    el("span", { class: "label" }, on.length ? "Recommendation" : "Default"),
+    el("div", { class: "pick" }, pickNeon ? "Neon + Clerk" : "Supabase"),
+    el("p", {}, !on.length ? "With nothing ticked, start on Supabase. It's in template-next already." : pickNeon
+      ? "This project's needs line up with what Neon and Clerk do best. Swap the code in src/lib/supabase and src/proxy.ts."
+      : neon.length ? "Some signals point to Neon + Clerk, but more favour Supabase. Stay on Supabase and revisit if those grow." : "Everything ticked plays to Supabase's strengths."),
+    ...(reasons.length ? [el("ul", { style: "margin:0;padding-left:20px" }, ...reasons)] : []),
+  );
+}
+verdict();
+
+const done = store.get("steps-done") || {};
+ENV.steps.forEach((s, i) => {
+  const id = `step-${i}`, input = el("input", { type: "checkbox", id, "aria-label": `Mark "${s.title}" done` });
+  input.checked = Boolean(s.done || done[s.title]);
+  if (s.done) input.disabled = true;
+  const card = el("div", { class: `sheet step${input.checked ? " done" : ""}` });
+  input.addEventListener("change", () => { done[s.title] = input.checked; store.set("steps-done", done); card.classList.toggle("done", input.checked); });
+  const links = s.links ? [el("p", {}, ...s.links.flatMap(([t, u], j) => [j ? " · " : "", el("a", { href: u, target: "_blank", rel: "noopener" }, `Create ${t}`)]))] : [];
+  card.append(input,
+    el("div", { class: "body" }, el("h3", {}, s.title), el("p", { class: "why" }, s.why), ...links, ...(s.detail.length ? [el("ul", {}, ...s.detail.map((d) => el("li", {}, d)))] : [])),
+    el("div", { class: "who" }, el("span", { class: `pill ${s.done ? "live" : s.who === "You" ? "todo" : "ready"}` }, s.done ? "Verified" : s.who), el("span", { class: "t" }, s.time)));
+  $("#steps").append(card);
+});
+
+$("#gloss").append(...ENV.glossary.map(([t, d]) => el("details", { class: "sheet" }, el("summary", {}, t), el("p", {}, d))));
+$("#log").append(...ENV.log.map(([d, t]) => el("li", {}, el("time", { datetime: d }, d), el("span", {}, t))));
+</script>
+</body>
+</html>

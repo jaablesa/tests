@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Checks what an agent can operate from this environment, without printing any secret.
+# For each service: is the API host reachable (network policy), and does a cheap authenticated
+# read succeed (credential present and valid)? Tokens may come from an env var or be injected
+# by the environment's network-secrets proxy, so a missing env var is not by itself a failure.
+set -u
+
+check() { # name  url  env-var  auth-header-format
+  local name=$1 url=$2 var=$3 fmt=$4 code hdr=()
+  local token=${!var:-}
+  [[ -n $token ]] && hdr=(-H "$(printf "$fmt" "$token")")
+  code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "${hdr[@]}" "$url" 2>/dev/null)
+  local verdict
+  case $code in
+    000) verdict="BLOCKED   host not allowed by network policy" ;;
+    2??) verdict="OK" ;;
+    401|403) verdict="NO ACCESS credential missing or invalid (${var})" ;;
+    *) verdict="CHECK     unexpected HTTP $code" ;;
+  esac
+  printf '%-12s %-4s %s\n' "$name" "$code" "$verdict"
+}
+
+echo "Agent access check · $(date -u +%Y-%m-%dT%H:%MZ)"
+check GitHub     https://api.github.com/user                          GH_ADMIN_TOKEN        'Authorization: Bearer %s'
+check Vercel     https://api.vercel.com/v2/user                       VERCEL_TOKEN          'Authorization: Bearer %s'
+check Cloudflare https://api.cloudflare.com/client/v4/user/tokens/verify CLOUDFLARE_API_TOKEN 'Authorization: Bearer %s'
+check Sentry     https://sentry.io/api/0/organizations/               SENTRY_AUTH_TOKEN     'Authorization: Bearer %s'
+check PostHog    https://eu.posthog.com/api/users/@me/                POSTHOG_PERSONAL_API_KEY 'Authorization: Bearer %s'
+check BetterStack https://uptime.betterstack.com/api/v2/monitors      BETTERSTACK_API_TOKEN 'Authorization: Bearer %s'
+check Supabase   https://api.supabase.com/v1/projects                 SUPABASE_ACCESS_TOKEN 'Authorization: Bearer %s'
+
+# GitHub reads succeed with the session's built-in token too; creating repos needs GH_ADMIN_TOKEN.
+if [[ -z ${GH_ADMIN_TOKEN:-} ]]; then
+  echo "note: GH_ADMIN_TOKEN not set; GitHub works for this session's repos only (no repo creation)."
+fi
