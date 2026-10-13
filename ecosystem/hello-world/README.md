@@ -2,7 +2,7 @@
 
 The most show-off Hello, World I could make: more than 15,000 particles say hello in 12 languages, over 12 cities at night, with Pix, a little particle person, in local dress. Move your pointer to scatter the particles; tap to travel to the next city.
 
-Live at **https://hello.yourdomain.com**.
+Live at **https://hello.codelessbridge.com**.
 
 ## Run it
 
@@ -19,4 +19,4 @@ There's also a terminal version: `python3 cli/hello.py`.
 - `src/main.ts`: boots the scene and sends a `city_visited` event to PostHog.
 - `public/og.png`: the link preview image for X and Slack, captured from the real page.
 
-Started from `jaablesa/template-vite`; see `CLAUDE.md` for conventions.
+Started from `jaablesa/template-vite`; see `AGENTS.md` for conventions.

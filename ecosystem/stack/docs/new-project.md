@@ -32,14 +32,14 @@ Update the name, title, description and Open Graph tags (`index.html` or `src/ap
 
 1. **Add New → Project**, import the repo. The framework is detected automatically.
 2. Paste the environment variables for **Production** and **Preview**.
-3. **Settings → Domains → Add** `<name>.yourdomain.com`. Vercel shows a CNAME target.
+3. **Settings → Domains → Add** `<name>.codelessbridge.com`. Vercel shows a CNAME target.
 4. In Cloudflare DNS, add that CNAME record with the proxy **off** (grey cloud), so Vercel can issue the certificate.
 
 From now on, `main` is production and every PR gets its own preview URL.
 
 ## 5. Watch it
 
-- Better Stack: add a monitor for `https://<name>.yourdomain.com` and add it to the status page.
+- Better Stack: add a monitor for `https://<name>.codelessbridge.com` and add it to the status page.
 - Renovate: install the Renovate GitHub App on the new repo (or give it access to all repos once).
 - Share the link and check the preview card with the X and LinkedIn card validators.
 

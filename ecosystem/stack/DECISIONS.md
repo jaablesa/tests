@@ -9,6 +9,7 @@ Every layer, the pick, why, the alternative, and the signal that means it's time
 3. **Every project is observable from its first deploy.** Errors, analytics and uptime come with the template.
 4. **Services stay inactive without keys.** Templates run locally and in forks with zero accounts.
 5. **Prefer portable over clever.** Postgres, standard web APIs, and SQL migrations in git.
+6. **The harness is agent-agnostic.** Instructions for coding agents live only in `AGENTS.md`, the open standard read by Codex, Cursor, Copilot, Gemini CLI and others. No tool-specific files like `CLAUDE.md`.
 
 ## Foundation
 
@@ -25,6 +26,7 @@ Every layer, the pick, why, the alternative, and the signal that means it's time
 | Secrets | **1Password**, synced into Vercel env vars | One source of truth you already trust; nothing secret in git | Doppler | Secrets need syncing to several platforms automatically |
 | Lint and format | **Biome** | One fast tool replaces ESLint and Prettier; same config in every repo | ESLint + Prettier | You need a plugin that only ESLint has |
 | Dependency updates | **Renovate** | Weekly batches; dev-tool minors and patches merge themselves when CI passes | Dependabot | You want zero setup and don't mind a noisier PR stream |
+| Agent instructions | **`AGENTS.md` only** | One open format every major coding agent reads; switching agents costs nothing | Tool-specific files (`CLAUDE.md`, `.cursorrules`) | Never; if an agent can't read `AGENTS.md`, point it there from its own settings, not a second file |
 | CI | **GitHub Actions** | Runs lint and build on every PR, next to the code | None needed; Vercel's build is the fallback check | n/a |
 
 ## Per project
