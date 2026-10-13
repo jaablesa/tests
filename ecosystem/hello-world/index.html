@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Hello, World!</title>
+    <meta name="description" content="Thousands of particles say Hello, World in 12 languages across 12 cities, with Pix in local dress." />
+    <meta property="og:title" content="Hello, World!" />
+    <meta property="og:description" content="Thousands of particles say Hello, World in 12 languages across 12 cities. Move to disturb, tap to travel." />
+    <meta property="og:image" content="https://hello.yourdomain.com/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#07060b" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+<div class="hud top">
+  <span><b id="count">0</b> particles · <b id="fps">60</b> fps</span>
+  <span>move to disturb · tap to travel</span>
+</div>
+<canvas id="stage" aria-hidden="true"></canvas>
+<button class="buddy" id="buddy" type="button" aria-label="Pix. Next language"></button>
+<p class="sr" id="said" aria-live="polite">Hello, World!</p>
+<div class="hud bottom">
+  <button id="next" type="button">Next city →</button>
+</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

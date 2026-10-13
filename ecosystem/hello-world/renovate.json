@@ -1,0 +1,13 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", "schedule:weekly"],
+  "packageRules": [
+    {
+      "description": "Minor and patch updates of dev tooling merge themselves once CI is green.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    { "groupName": "sentry", "matchPackageNames": ["@sentry/**"] }
+  ]
+}
