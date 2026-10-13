@@ -2,6 +2,7 @@
 
 How I build and ship things. One place for every tool decision, why it was made, the alternative, and when to switch.
 
+- [`environment.html`](environment.html): the visual guide to all of this, with remaining setup steps. Reviewed weekly.
 - [`DECISIONS.md`](DECISIONS.md): every layer of the stack, with its reasoning and alternative.
 - [`docs/new-project.md`](docs/new-project.md): from idea to a live URL with errors, analytics and uptime checks.
 - [`docs/domain.md`](docs/domain.md): one-time domain and DNS setup.
